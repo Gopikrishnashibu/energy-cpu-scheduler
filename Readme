@@ -1,0 +1,153 @@
+# ⚡ Energy-Aware CPU Scheduler with DVFS & Thermal Management
+
+## 📌 Overview
+
+This project implements an **Energy-Efficient CPU Scheduling System** using:
+
+* **DVFS (Dynamic Voltage and Frequency Scaling)**
+* **Thermal-aware scheduling**
+* **Round Robin-based process execution**
+
+The goal is to **reduce power consumption**, **control CPU temperature**, and **maintain performance**.
+
+---
+
+## 🎯 Objectives
+
+* Minimize **energy consumption**
+* Avoid **thermal overheating**
+* Optimize **CPU scheduling efficiency**
+* Compare with **baseline scheduling (Normal RR)**
+
+---
+
+## 🧠 Key Concepts Used
+
+* CPU Scheduling (Round Robin)
+* DVFS (Dynamic Frequency Scaling)
+* Thermal Modeling
+* Load Prediction
+* Energy Optimization
+
+---
+
+## 🏗️ Project Structure
+
+```
+energy-cpu-scheduler/
+│
+├── app.py                # Flask backend
+├── scheduler.py         # Core scheduling + DVFS logic
+├── templates/
+│   └── index.html       # Frontend UI
+└── README.md
+```
+
+---
+
+## ⚙️ How It Works
+
+1. User enters process details (burst time, etc.)
+2. Scheduler applies **Round Robin**
+3. Load is monitored and **frequency is adjusted (DVFS)**
+4. Thermal model tracks CPU temperature
+5. System calculates:
+
+   * Energy consumption
+   * Average power
+   * Scheduling metrics
+
+---
+
+## 🚀 Features
+
+* ✅ DVFS-based frequency scaling
+* ✅ Thermal-aware CPU simulation
+* ✅ Gantt chart generation
+* ✅ Energy & power calculation
+* ✅ Comparison with baseline system
+* ✅ Simple UI using Flask
+
+---
+
+## 🖥️ How to Run
+
+### 1. Install Python
+
+Make sure Python 3.x is installed
+
+### 2. Install dependencies
+
+```
+pip install flask matplotlib
+```
+
+### 3. Run the project
+
+```
+python app.py
+```
+
+### 4. Open in browser
+
+```
+http://127.0.0.1:5000/
+```
+
+---
+
+## 📊 Output
+
+* Gantt Chart (Process execution timeline)
+* Energy Consumption
+* Average Power
+* Thermal Report
+* Efficiency Comparison
+
+---
+
+## 📸 Screenshots
+
+(Add your project screenshots here for better presentation)
+
+---
+
+## 📈 Results
+
+* Reduced energy consumption using DVFS
+* Better thermal control
+* Efficient CPU utilization
+
+---
+
+## 🔮 Future Improvements
+
+* Add Machine Learning for load prediction
+* Real-time visualization dashboard
+* Multi-core advanced scheduling
+* Integration with hardware sensors
+
+---
+
+## 👨‍💻 Author
+
+**Gopikrishna S**
+B.Tech CSE
+
+---
+
+## 📚 References
+
+* Operating System Concepts (Silberschatz)
+* DVFS Research Papers
+* Python & Flask Documentation
+
+---
+
+## ⭐ Conclusion
+
+This project demonstrates how **intelligent scheduling + DVFS** can significantly improve **energy efficiency and thermal stability** in CPU systems.
+
+---
+
+👉 *Feel free to fork, use, and improve this project!*
