@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Energy-Efficient CPU Scheduler</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Exo+2:wght@300;400;500;600&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0e1a;color:#c8d8f0;font-family:'Exo 2',sans-serif;font-size:13px;min-height:100vh}
+  :root{--cyan:#00e5ff;--green:#00ff88;--orange:#ff6b35;--red:#ff3d3d;--border:#1e3a5f;--bg2:#0d1428;--bg3:#111a2e}
+  .mono{font-family:'Share Tech Mono',monospace}
+
+  /* HEADER */
+  .header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--border);background:#0a0e1aee;position:sticky;top:0;z-index:100}
+  .logo{display:flex;align-items:center;gap:10px}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--cyan);animation:blink 2s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+  .logo-text{font-size:15px;font-weight:500;color:#fff;letter-spacing:.06em}
+  .logo-sub{font-size:9px;color:#4a6080;letter-spacing:.14em;text-transform:uppercase}
+  .badge{font-size:10px;padding:3px 12px;border:1px solid var(--green);color:var(--green);border-radius:2px;font-family:'Share Tech Mono',monospace}
+
+  /* CONTROLS */
+  .controls{display:flex;flex-wrap:wrap;gap:10px;padding:14px 24px;border-bottom:1px solid var(--border);background:#0d142888}
+  .ctrl{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:7px 12px}
+  .ctrl label{font-size:9px;color:#4a6080;text-transform:uppercase;letter-spacing:.12em;white-space:nowrap}
+  select,input[type=range]{background:#111a2e;border:1px solid var(--border);color:#c8d8f0;border-radius:3px;padding:3px 7px;font-size:11px;font-family:'Exo 2',sans-serif;cursor:pointer}
+  .ctrl span{font-size:11px;color:var(--cyan);font-family:'Share Tech Mono',monospace;min-width:30px}
+  .run-btn{background:transparent;border:1px solid var(--cyan);color:var(--cyan);padding:8px 22px;border-radius:3px;font-size:12px;font-family:'Exo 2',sans-serif;cursor:pointer;letter-spacing:.1em;transition:.2s}
+  .run-btn:hover{background:rgba(0,229,255,.12);transform:translateY(-1px)}
+  .run-btn:active{transform:scale(.97)}
+
+  /* MAIN */
+  .main{padding:16px 24px}
+
+  /* METRICS */
+  .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+  .mcard{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:12px 14px;position:relative;overflow:hidden}
+  .mcard::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.4}
+  .mcard-label{font-size:9px;color:#4a6080;text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px}
+  .mcard-val{font-size:26px;font-weight:300;font-family:'Share Tech Mono',monospace;color:#fff;line-height:1}
+  .mcard-val sup{font-size:12px;color:#4a6080;margin-left:2px}
+  .mcard-sub{font-size:9px;color:#4a6080;margin-top:4px}
+  .mbar{height:2px;background:#1e3a5f;border-radius:1px;margin-top:8px}
+  .mbar-fill{height:100%;border-radius:1px;transition:width 1s ease}
+
+  /* GRID */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+  .panel{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:14px}
+  .ptitle{font-size:9px;letter-spacing:.15em;color:var(--cyan);text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+  .ptitle::before{content:'';width:3px;height:10px;background:var(--cyan);border-radius:1px;display:inline-block}
+
+  /* GANTT */
+  .gantt-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+  .gantt-lbl{width:52px;font-size:10px;color:#4a6080;text-align:right;font-family:'Share Tech Mono',monospace;flex-shrink:0}
+  .gantt-track{flex:1;height:20px;background:#111a2e;border-radius:2px;position:relative}
+  .gseg{position:absolute;top:1px;height:18px;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#000;transition:width .7s ease,left .7s ease;overflow:hidden;white-space:nowrap;font-family:'Share Tech Mono',monospace}
+
+  /* DVFS */
+  .frow{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+  .flbl{width:52px;font-size:10px;color:#c8d8f0;flex-shrink:0}
+  .fbar-bg{flex:1;height:16px;background:#111a2e;border-radius:2px;overflow:hidden}
+  .fbar-fill{height:100%;display:flex;align-items:center;padding-left:8px;font-size:9px;font-weight:700;color:#000;font-family:'Share Tech Mono',monospace;transition:width .8s ease;border-radius:2px}
+  .fval{width:52px;font-size:10px;text-align:right;color:var(--cyan);font-family:'Share Tech Mono',monospace}
+
+  /* THERMAL */
+  .tgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+  .tcell{border-radius:3px;padding:10px 6px;text-align:center;border:1px solid transparent;transition:.5s}
+  .tcell-temp{font-size:16px;font-weight:600;font-family:'Share Tech Mono',monospace}
+  .tcell-name{font-size:8px;opacity:.7;margin-top:2px}
+
+  /* TABLE */
+  table{width:100%;border-collapse:collapse}
+  th{font-size:9px;letter-spacing:.1em;color:#4a6080;text-transform:uppercase;padding:5px 8px;border-bottom:1px solid var(--border);text-align:left}
+  td{padding:6px 8px;font-family:'Share Tech Mono',monospace;font-size:11px;border-bottom:1px solid #1e3a5f33}
+  tr:last-child td{border-bottom:none}
+  .dot-p{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px}
+
+  /* COMPARE */
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .citem{text-align:center;padding:10px;background:#111a2e;border-radius:4px;border:1px solid var(--border)}
+  .citem-algo{font-size:9px;color:#4a6080;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+  .citem-power{font-size:22px;font-weight:300;font-family:'Share Tech Mono',monospace}
+  .citem-save{font-size:10px;margin-top:3px}
+
+  /* LOG */
+  .log-area{background:var(--bg2);border:1px solid var(--border);border-radius:4px;padding:12px 14px;margin-top:14px}
+  .log-entries{font-family:'Share Tech Mono',monospace;font-size:10px;color:#4a6080;line-height:1.9;max-height:100px;overflow-y:auto}
+  .log-ok span{color:var(--green)}
+  .log-warn span{color:var(--orange)}
+  .log-info span{color:var(--cyan)}
+
+  .chart-wrap{position:relative;height:100px}
+  .chart-wrap2{position:relative;height:130px;margin-top:10px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">
+    <div class="dot"></div>
+    <div>
+      <div class="logo-text mono">ENERGY-EFFICIENT CPU SCHEDULER</div>
+      <div class="logo-sub">DVFS + Thermal-Aware • Mobile/Embedded Simulation</div>
+    </div>
+  </div>
+  <div class="badge">● LIVE SIM</div>
+</div>
+
+<div class="controls">
+  <div class="ctrl">
+    <label>Algorithm</label>
+    <select id="algoSel">
+      <option value="dvfs">DVFS-Aware Round Robin</option>
+      <option value="thermal">Thermal-Aware Priority</option>
+      <option value="edf">Energy-Deadline First</option>
+      <option value="rr">Standard Round Robin</option>
+    </select>
+  </div>
+  <div class="ctrl">
+    <label>Workload</label>
+    <select id="workloadSel">
+      <option value="light">Light (4 tasks)</option>
+      <option value="medium" selected>Medium (6 tasks)</option>
+      <option value="heavy">Heavy (8 tasks)</option>
+    </select>
+  </div>
+  <div class="ctrl">
+    <label>Thermal Limit</label>
+    <input type="range" id="tlimit" min="60" max="95" value="80" style="width:80px">
+    <span id="tlimitVal">80°C</span>
+  </div>
+  <button class="run-btn" onclick="runSim()">▶ RUN SIMULATION</button>
+</div>
+
+<div class="main">
+  <div class="metrics">
+    <div class="mcard">
+      <div class="mcard-label">Power Consumed</div>
+      <div class="mcard-val" id="mPow">—<sup>W</sup></div>
+      <div class="mcard-sub" id="mPowSub">awaiting simulation</div>
+      <div class="mbar"><div class="mbar-fill" id="mPowBar" style="width:0%;background:#ff6b35"></div></div>
+    </div>
+    <div class="mcard">
+      <div class="mcard-label">Energy Saved</div>
+      <div class="mcard-val" id="mSave">—<sup>%</sup></div>
+      <div class="mcard-sub">vs Standard Round Robin</div>
+      <div class="mbar"><div class="mbar-fill" id="mSaveBar" style="width:0%;background:#00ff88"></div></div>
+    </div>
+    <div class="mcard">
+      <div class="mcard-label">Avg Frequency</div>
+      <div class="mcard-val" id="mFreq">—<sup>GHz</sup></div>
+      <div class="mcard-sub" id="mFreqSub">—</div>
+      <div class="mbar"><div class="mbar-fill" id="mFreqBar" style="width:0%;background:#00e5ff"></div></div>
+    </div>
+    <div class="mcard">
+      <div class="mcard-label">Peak Temp</div>
+      <div class="mcard-val" id="mTemp">—<sup>°C</sup></div>
+      <div class="mcard-sub" id="mTempSub">—</div>
+      <div class="mbar"><div class="mbar-fill" id="mTempBar" style="width:0%;background:#ff3d3d"></div></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <div class="ptitle">Gantt Chart — Task Execution</div>
+      <div id="ganttArea"></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">DVFS — Frequency per Core</div>
+      <div id="dvfsArea"></div>
+      <div class="compare" id="compareArea"></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <div class="ptitle">Thermal Map</div>
+      <div class="tgrid" id="thermalArea"></div>
+      <div class="chart-wrap">
+        <canvas id="thermalChart" role="img" aria-label="Core temperature history line chart">Temperature history.</canvas>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Process Queue</div>
+      <table>
+        <thead><tr><th>PID</th><th>Name</th><th>Priority</th><th>Burst</th><th>Power</th><th>Status</th></tr></thead>
+        <tbody id="procTable"></tbody>
+      </table>
+      <div class="chart-wrap2">
+        <canvas id="energyChart" role="img" aria-label="Energy comparison bar chart between algorithms">Energy comparison.</canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="log-area">
+    <div class="ptitle">Scheduler Log</div>
+    <div class="log-entries" id="logArea">
+      <div class="log-info"><span>[INIT]</span> System ready. Press RUN SIMULATION to begin.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let tChart = null, eChart = null;
+
+document.getElementById('tlimit').oninput = function(){
+  document.getElementById('tlimitVal').textContent = this.value + '°C';
+};
+
+const PC = {high:'#ff3d3d', med:'#ff6b35', low:'#00e5ff'};
+
+function log(msg, type='info'){
+  const area = document.getElementById('logArea');
+  const d = document.createElement('div');
+  d.className = 'log-' + type;
+  const parts = msg.split('|');
+  d.innerHTML = `<span>${parts[0]}</span>${parts[1]||''}`;
+  area.appendChild(d);
+  area.scrollTop = area.scrollHeight;
+}
+
+async function runSim(){
+  const btn = document.querySelector('.run-btn');
+  btn.textContent = '⏳ RUNNING...';
+  btn.disabled = true;
+
+  const payload = {
+    algorithm:     document.getElementById('algoSel').value,
+    workload:      document.getElementById('workloadSel').value,
+    thermal_limit: document.getElementById('tlimit').value,
+  };
+
+  try {
+    const res  = await fetch('/simulate', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    document.getElementById('logArea').innerHTML = '';
+    log('[SIM]| Algorithm: ' + payload.algorithm.toUpperCase() + ' | Workload: ' + payload.workload);
+
+    renderMetrics(data.metrics);
+    renderGantt(data.gantt);
+    renderDVFS(data.gantt);
+    renderThermal(data.thermal, data.thermal_history);
+    renderTable(data.gantt, data.metrics);
+    renderEnergyChart(data.metrics);
+    data.log.forEach(l => log(l.includes('THERMAL') ? l+'|' : l+'|', l.includes('THERMAL') ? 'warn' : 'ok'));
+
+  } catch(e){
+    log('[ERROR]| ' + e.message, 'warn');
+  }
+
+  btn.textContent = '▶ RUN SIMULATION';
+  btn.disabled = false;
+}
+
+function renderMetrics(m){
+  document.getElementById('mPow').innerHTML    = m.avg_power + '<sup>W</sup>';
+  document.getElementById('mPowSub').textContent = 'Baseline: ' + m.baseline_power + 'W';
+  document.getElementById('mPowBar').style.width = Math.min(100,(m.avg_power/15)*100) + '%';
+
+  document.getElementById('mSave').innerHTML   = m.energy_savings + '<sup>%</sup>';
+  document.getElementById('mSaveBar').style.width = m.energy_savings + '%';
+
+  document.getElementById('mFreq').innerHTML   = m.avg_freq + '<sup>GHz</sup>';
+  document.getElementById('mFreqSub').textContent = 'Max: 2.40 GHz';
+  document.getElementById('mFreqBar').style.width = (m.avg_freq/2.4)*100 + '%';
+
+  document.getElementById('mTemp').innerHTML   = m.peak_temp + '<sup>°C</sup>';
+  document.getElementById('mTempSub').textContent = m.peak_temp > 75 ? 'THROTTLING ACTIVE' : 'Normal';
+  document.getElementById('mTempBar').style.width = ((m.peak_temp-30)/70)*100 + '%';
+}
+
+function renderGantt(gantt){
+  const area = document.getElementById('ganttArea');
+  area.innerHTML = '';
+  const total = Math.max(...gantt.map(g=>g.end));
+  const cores = [...new Set(gantt.map(g=>g.core))].sort();
+  cores.forEach(c => {
+    const row = document.createElement('div'); row.className='gantt-row';
+    const lbl = document.createElement('div'); lbl.className='gantt-lbl'; lbl.textContent='Core '+c;
+    const track = document.createElement('div'); track.className='gantt-track';
+    gantt.filter(g=>g.core===c).forEach(g=>{
+      const seg = document.createElement('div'); seg.className='gseg';
+      seg.style.left  = (g.start/total*100)+'%';
+      seg.style.width = '0%';
+      seg.style.background = PC[g.priority];
+      seg.textContent = g.name.substring(0,7);
+      track.appendChild(seg);
+      setTimeout(()=>{ seg.style.width = ((g.end-g.start)/total*100)+'%'; }, 300);
+    });
+    row.appendChild(lbl); row.appendChild(track); area.appendChild(row);
+  });
+}
+
+function renderDVFS(gantt){
+  const area = document.getElementById('dvfsArea');
+  area.innerHTML = '';
+  const cores = [...new Set(gantt.map(g=>g.core))].sort();
+  cores.forEach(c => {
+    const cg = gantt.filter(g=>g.core===c);
+    const avgFreq = cg.reduce((s,g)=>s+g.freq,0)/cg.length;
+    const pct = (avgFreq/2.4)*100;
+    const row = document.createElement('div'); row.className='frow';
+    row.innerHTML = `<div class="flbl">Core ${c}</div>
+      <div class="fbar-bg"><div class="fbar-fill" id="fb${c}" style="width:0%;background:${c%2?'#ff6b35':'#00e5ff'}">${avgFreq.toFixed(2)} GHz</div></div>
+      <div class="fval">${avgFreq.toFixed(2)}</div>`;
+    area.appendChild(row);
+    setTimeout(()=>{ const el=document.getElementById('fb'+c); if(el) el.style.width=pct+'%'; },400+c*80);
+  });
+
+  const compare = document.getElementById('compareArea');
+  const m_avg = gantt.reduce((s,g)=>s+g.power,0)/gantt.length;
+  const base  = gantt.reduce((s,g)=>s+g.power*1.3,0)/gantt.length;
+  const save  = Math.round((1-m_avg/base)*100);
+  compare.innerHTML = `
+    <div class="citem"><div class="citem-algo">Standard RR</div>
+      <div class="citem-power" style="color:#ff6b35">${base.toFixed(1)}<span style="font-size:11px;color:#4a6080">W</span></div>
+      <div class="citem-save" style="color:#4a6080">Baseline</div></div>
+    <div class="citem"><div class="citem-algo">Current Algo</div>
+      <div class="citem-power" style="color:#00ff88">${m_avg.toFixed(1)}<span style="font-size:11px;color:#4a6080">W</span></div>
+      <div class="citem-save" style="color:#00ff88">-${save}% energy</div></div>`;
+}
+
+function renderThermal(thermal, history){
+  const area = document.getElementById('thermalArea');
+  area.innerHTML = '';
+  Object.entries(thermal).forEach(([key, temp])=>{
+    const heat = Math.min(1,(temp-35)/55);
+    const r = Math.round(heat*220); const g = Math.round((1-heat)*160);
+    const bg = `rgb(${r},${g},40)`;
+    const cell = document.createElement('div'); cell.className='tcell';
+    cell.style.background = bg+'22'; cell.style.borderColor = bg+'66';
+    cell.innerHTML = `<div class="tcell-temp" style="color:${bg}">${temp}°</div><div class="tcell-name" style="color:${bg}99">${key}</div>`;
+    area.appendChild(cell);
+  });
+
+  if(tChart){ tChart.destroy(); }
+  const ctx = document.getElementById('thermalChart').getContext('2d');
+  const labels = history[0] ? history[0].map((_,i)=>'t'+i) : [];
+  const colors = ['#00e5ff','#ff6b35','#00ff88','#ff3d3d'];
+  tChart = new Chart(ctx, {
+    type:'line',
+    data:{ labels, datasets: Object.entries(history).map(([k,v],i)=>({
+      label:'Core '+k, data:v, borderColor:colors[i], borderWidth:1.5,
+      pointRadius:1.5, tension:.4, fill:false, borderDash:i>1?[4,3]:[]
+    }))},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#4a6080',font:{size:8}},grid:{color:'#1e3a5f33'}},
+        y:{ticks:{color:'#4a6080',font:{size:8},callback:v=>v+'°'},grid:{color:'#1e3a5f33'},min:30}
+      }
+    }
+  });
+}
+
+function renderTable(gantt, metrics){
+  const body = document.getElementById('procTable');
+  const seen = {};
+  body.innerHTML = '';
+  gantt.forEach((g,i)=>{
+    if(seen[g.pid]) return;
+    seen[g.pid] = true;
+    const done = gantt.filter(x=>x.pid===g.pid && x.end===Math.max(...gantt.filter(y=>y.pid===g.pid).map(y=>y.end)));
+    const status = i < 2 ? 'DONE' : i < 4 ? 'RUNNING' : 'QUEUED';
+    const sc = {DONE:'#00ff88',RUNNING:'#00e5ff',QUEUED:'#4a6080'}[status];
+    body.innerHTML += `<tr>
+      <td style="color:#4a6080">${g.pid}</td><td>${g.name}</td>
+      <td><span class="dot-p" style="background:${PC[g.priority]}"></span>${g.priority}</td>
+      <td>${g.end-g.start}ms</td>
+      <td style="color:${g.power>2.5?'#ff6b35':'#c8d8f0'}">${g.power}W</td>
+      <td style="color:${sc}">${status}</td></tr>`;
+  });
+}
+
+function renderEnergyChart(metrics){
+  if(eChart){ eChart.destroy(); }
+  const ctx = document.getElementById('energyChart').getContext('2d');
+  eChart = new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:['Avg Power','Baseline Power','Energy Saved %'],
+      datasets:[{
+        label:'Metrics',
+        data:[metrics.avg_power, metrics.baseline_power, metrics.energy_savings],
+        backgroundColor:['#ff6b3588','#ff3d3d88','#00ff8888'],
+        borderColor:['#ff6b35','#ff3d3d','#00ff88'],
+        borderWidth:1
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#4a6080',font:{size:9}},grid:{color:'#1e3a5f33'}},
+        y:{ticks:{color:'#4a6080',font:{size:9}},grid:{color:'#1e3a5f33'}}
+      }
+    }
+  });
+}
+
+window.onload = runSim;
+</script>
+</body>
+</html>
