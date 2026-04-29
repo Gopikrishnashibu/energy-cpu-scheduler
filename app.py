@@ -1,5 +1,5 @@
 # app.py — Flask Web Server
-
+# Flask application for Energy Efficient CPU Scheduler
 from flask import Flask, render_template, request, jsonify
 from scheduler import DVFSScheduler
 
@@ -49,7 +49,6 @@ def simulate():
     scheduler = DVFSScheduler(thermal_limit=thermal_limit)
     result = scheduler.schedule(tasks, algorithm=algorithm)
     return jsonify(result)
-    print(result['log'])
 
 if __name__ == '__main__':
     print("Starting Flask server...")
