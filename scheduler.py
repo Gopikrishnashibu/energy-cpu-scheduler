@@ -1,4 +1,5 @@
 # scheduler.py — Core DVFS + Thermal-Aware Scheduling Logic
+# Core scheduling logic implementation
 class LoadPredictor:
     def __init__(self):
         self.history = []
