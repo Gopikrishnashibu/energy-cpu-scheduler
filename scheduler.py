@@ -26,7 +26,7 @@ class Process:
         self.turnaround_time = 0
         
 
-
+# Thermal model to control CPU temperature
 class ThermalModel:
     def __init__(self, cores=4, ambient=35.0, limit=80.0):
         self.cores = cores
