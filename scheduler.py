@@ -52,7 +52,7 @@ class ThermalModel:
         return {f'core_{i}': self.temps[i] for i in range(self.cores)}
     
 
-
+# Dynamic Voltage and Frequency Scaling based on CPU load
 class DVFSScheduler:
     FREQ_LEVELS = {
         'high': (2.4, 1.00),
