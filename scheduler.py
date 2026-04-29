@@ -146,6 +146,7 @@ class DVFSScheduler:
             'thermal': self.thermal.report(),
             'thermal_history': self.thermal.history,
             'log': self.log,
+            # Energy and performance metrics calculation
             'metrics': {
                 'proactive_throttles': self.proactive_throttles,
                 'predicted_load': round(predicted_load, 2),
